@@ -1,0 +1,22 @@
+# Environments and Secrets
+backend/.env
+backend/venv/
+__pycache__/
+*.pyc
+
+# Dynamic AI Sandbox execution folders
+backend/runs/
+
+# Node/React Frontend
+**/node_modules/
+**/dist/
+**/build/
+.eslintcache
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor folders
+.vscode/
+.idea/
