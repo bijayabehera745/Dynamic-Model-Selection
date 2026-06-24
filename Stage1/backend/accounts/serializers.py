@@ -45,8 +45,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     Extends the default JWT login serializer to include student info
     in the token response, so the frontend doesn't need a second API call.
     """
+    is_admin = serializers.BooleanField(required=False, write_only=True)
 
     def validate(self, attrs):
+        is_admin_login = attrs.pop('is_admin', False)
         data = super().validate(attrs)
+        
+        if is_admin_login and not (self.user.is_staff or self.user.is_superuser):
+            raise serializers.ValidationError({"detail": "You do not have admin privileges."})
+            
         data['student'] = StudentProfileSerializer(self.user).data
         return data

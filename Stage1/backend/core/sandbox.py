@@ -92,6 +92,12 @@ def run_in_sandbox(
         if output_path.exists():
             output_image_b64 = base64.b64encode(output_path.read_bytes()).decode('utf-8')
 
+        # Read model.pkl if the script saved one
+        model_pkl_b64 = None
+        model_path = run_dir / 'model.pkl'
+        if model_path.exists():
+            model_pkl_b64 = base64.b64encode(model_path.read_bytes()).decode('utf-8')
+
         success = result.returncode == 0
 
         if not success:
@@ -101,6 +107,7 @@ def run_in_sandbox(
             'stdout': result.stdout,
             'stderr': result.stderr,
             'output_image': output_image_b64,
+            'model_b64': model_pkl_b64,
             'success': success,
         }
 

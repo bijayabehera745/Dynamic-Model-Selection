@@ -6,13 +6,13 @@ All datasets use NUMERIC FEATURES only so sklearn classifiers can train on them
 without any NLP preprocessing.
 
 Column naming convention:
-  - Feature columns describe observable properties (measurable by a student)
-  - Last column is always 'label' — the class to predict
+    - Feature columns describe observable properties (measurable by a student)
+    - Last column is always 'label' — the class to predict
 
 Why numeric only?
-  The goal is to teach classification concepts (bias, imbalance, overfitting)
-  not natural language processing. Numeric features keep the sandbox code simple
-  and training fast (< 5 seconds).
+    The goal is to teach classification concepts (bias, imbalance, overfitting)
+    not natural language processing. Numeric features keep the sandbox code simple
+    and training fast (< 5 seconds).
 """
 
 import io
@@ -267,7 +267,7 @@ def gaming_bot_detector_afkbot() -> bytes:
     # AFK bots look human in CPS/reaction but have zero movement variance
     a_cps  = rng.uniform(0, 2, 30)
     a_rt   = rng.uniform(300, 600, 30)
-    a_var  = rng.uniform(0.0, 0.01, 30)   # perfectly still
+    a_var  = rng.uniform(0.0, 0.01, 30)
     b_cps  = rng.uniform(40, 60, n)
     b_rt   = rng.uniform(1, 15, n)
     b_var  = rng.uniform(0.0, 0.05, n)

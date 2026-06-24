@@ -1,8 +1,8 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { BookOpen, BarChart2, BrainCircuit, ShieldAlert, LogOut } from 'lucide-react';
+import { BookOpen, BarChart2, BrainCircuit, ShieldAlert, LogOut, Network } from 'lucide-react';
 
-const StudentDashboard = ({ onNavigateToLab }) => {
+const StudentDashboard = ({ onNavigateToLab, onNavigateToAgentic }) => {
   const { user, logout } = useContext(AuthContext);
 
   const modules = [
@@ -42,6 +42,16 @@ const StudentDashboard = ({ onNavigateToLab }) => {
       icon: ShieldAlert,
       color: 'var(--accent-red)',
       active: false
+    },
+    {
+      id: 'agentic_sandbox',
+      title: 'Agentic Flow Sandbox',
+      subtitle: 'Module 5',
+      description: 'Build your own AI Agents, connect them together, and solve complex missions!',
+      icon: Network,
+      color: 'var(--accent-orange, #f97316)',
+      active: true,
+      onClick: onNavigateToAgentic
     }
   ];
 
@@ -60,7 +70,7 @@ const StudentDashboard = ({ onNavigateToLab }) => {
       </div>
 
       {/* Grid of Modules */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '30px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '30px' }}>
         {modules.map(mod => {
           const Icon = mod.icon;
           return (
@@ -69,6 +79,8 @@ const StudentDashboard = ({ onNavigateToLab }) => {
               className="glass-panel"
               onClick={mod.active ? mod.onClick : undefined}
               style={{ 
+                flex: '1 1 500px',
+                maxWidth: '550px',
                 padding: '30px', 
                 cursor: mod.active ? 'pointer' : 'not-allowed',
                 opacity: mod.active ? 1 : 0.6,

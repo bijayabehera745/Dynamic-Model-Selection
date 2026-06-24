@@ -1,0 +1,66 @@
+import { 
+  Type, FileText, Camera, 
+  Bot, Minimize2, Smile, Globe, 
+  GitBranch, Merge, 
+  MonitorPlay, BarChart3 
+} from 'lucide-react';
+import './AgenticFlow.css';
+
+export default function Sidebar() {
+  const onDragStart = (event, nodeType, label) => {
+    event.dataTransfer.setData('application/reactflow', nodeType);
+    event.dataTransfer.setData('nodeLabel', label);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const DraggableItem = ({ type, label, icon: Icon, colorClass, points }) => (
+    <div 
+      className={`agentic-draggable-node ${colorClass}`}
+      onDragStart={(event) => onDragStart(event, type, label)}
+      draggable
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Icon size={18} /> <span>{label}</span>
+      </div>
+      {points !== undefined && (
+        <span style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: '4px', color: '#fbbf24' }}>
+          {points} pts
+        </span>
+      )}
+    </div>
+  );
+
+  return (
+    <aside className="agentic-sidebar">
+      <h3 className="agentic-sidebar-header">Walled Garden</h3>
+      
+      <div>
+        <h4 className="agentic-sidebar-category">Input (Senses)</h4>
+        <DraggableItem type="textInput" label="Text Input" icon={Type} colorClass="node-input" points={0} />
+        <DraggableItem type="documentReader" label="Document Reader" icon={FileText} colorClass="node-input" points={0} />
+        <DraggableItem type="visionScanner" label="Vision Scanner" icon={Camera} colorClass="node-input" points={0} />
+      </div>
+
+      <div>
+        <h4 className="agentic-sidebar-category">Processing (Brains)</h4>
+        <DraggableItem type="customizer" label="The Customizer" icon={Bot} colorClass="node-process" points={5} />
+        <DraggableItem type="summarizer" label="Summarizer" icon={Minimize2} colorClass="node-process" points={5} />
+        <DraggableItem type="sentimentRadar" label="Sentiment Radar" icon={Smile} colorClass="node-process" points={5} />
+        <DraggableItem type="webSearch" label="Safe Web Search" icon={Globe} colorClass="node-process" points={2} />
+      </div>
+
+      <div>
+        <h4 className="agentic-sidebar-category">Routing (Logic)</h4>
+        <DraggableItem type="decider" label="The Decider" icon={GitBranch} colorClass="node-route" />
+        <DraggableItem type="merger" label="The Merger" icon={Merge} colorClass="node-route" />
+      </div>
+
+      <div>
+        <h4 className="agentic-sidebar-category">Output (Actions)</h4>
+        <DraggableItem type="display" label="Screen Display" icon={MonitorPlay} colorClass="node-output" />
+        <DraggableItem type="chartGenerator" label="Chart Generator" icon={BarChart3} colorClass="node-output" />
+      </div>
+    </aside>
+  );
+}

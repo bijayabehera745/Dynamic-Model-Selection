@@ -5,8 +5,8 @@ Shared Gemini integration using the new google-genai SDK.
 All model apps use these two functions — never import google.genai directly in apps.
 
 Two functions:
-  - generate_code()        → produces the Python script for the sandbox
-  - generate_explanation() → produces a student-friendly explanation of results
+    - generate_code()        → produces the Python script for the sandbox
+    - generate_explanation() → produces a student-friendly explanation of results
 """
 
 import logging
@@ -23,6 +23,7 @@ _SYSTEM_CONTEXT = {
         "The script must:\n"
         "- Read data from /app/data/input.csv using pandas\n"
         "- Train a LinearRegression model using scikit-learn\n"
+        "- Save the trained model to /app/data/model.pkl using joblib\n"
         "- Save a matplotlib plot to /app/data/output.jpg\n"
         "- Print key metrics (R² score, predictions) to stdout\n"
         "Use clear variable names suitable for a 12-14 year old reading the code. "
@@ -73,6 +74,7 @@ def generate_code(
     scenario_title: str,
     variant_label: str,
     student_prompt: str = '',
+    data_columns: str = '',
 ) -> str:
     """
     Generate a Python script for the sandbox.
@@ -82,6 +84,7 @@ def generate_code(
         scenario_title:  e.g. 'The Smart Greenhouse'
         variant_label:   e.g. 'Messy Sensors (broken data)'
         student_prompt:  Optional custom instruction from the student.
+        data_columns:    Comma-separated list of columns in the CSV.
 
     Returns:
         Raw Python source code as a string.
@@ -92,6 +95,8 @@ def generate_code(
         f"Scenario: {scenario_title}\n"
         f"Data variant: {variant_label}\n"
     )
+    if data_columns:
+        user_message += f"Available columns in input.csv: {data_columns}\n"
     if student_prompt:
         user_message += f"Student's additional instruction: {student_prompt}\n"
 
@@ -100,7 +105,7 @@ def generate_code(
     try:
         client = _get_client()
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.0-flash',
             contents=full_prompt,
         )
         code = response.text.strip()
@@ -150,7 +155,7 @@ def generate_explanation(
     try:
         client = _get_client()
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.0-flash',
             contents=full_prompt,
         )
         return response.text.strip()

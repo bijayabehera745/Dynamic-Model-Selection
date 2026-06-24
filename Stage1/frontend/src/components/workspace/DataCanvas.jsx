@@ -1,10 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Database, Zap, AlertTriangle } from 'lucide-react';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Database, Zap, AlertTriangle, Package, Bot, ArrowRight, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../api';
+import trainingVideo from '../../assets/training_video.mp4';
 
-const DataCanvas = ({ scenario, selectedVariant, onSelectVariant, previewData, loading, onRunModel, isTraining }) => {
+const DataCanvas = ({ scenario, selectedVariant, onSelectVariant, previewData, loading, onRunModel, isTraining, experimentResult, experimentError }) => {
   const [interpretData, setInterpretData] = useState(null);
+  
+  // Animation states: 'selection', 'data_review', 'feeding_training', 'trained', 'robot_predict', 'error'
+  const [animationStep, setAnimationStep] = useState('selection');
+
+  useEffect(() => {
+    if (!selectedVariant) {
+      setAnimationStep('selection');
+    }
+  }, [selectedVariant]);
 
   useEffect(() => {
     const fetchInterpret = async () => {
@@ -22,6 +33,19 @@ const DataCanvas = ({ scenario, selectedVariant, onSelectVariant, previewData, l
     fetchInterpret();
   }, [scenario, selectedVariant]);
 
+  useEffect(() => {
+    if (animationStep === 'feeding_training' && !isTraining) {
+      if (experimentResult) {
+        setAnimationStep('trained');
+        setTimeout(() => {
+          setAnimationStep('robot_predict');
+        }, 2000);
+      } else if (experimentError) {
+        setAnimationStep('error');
+      }
+    }
+  }, [isTraining, experimentResult, experimentError, animationStep]);
+
   if (!scenario) {
     return (
       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
@@ -30,126 +54,388 @@ const DataCanvas = ({ scenario, selectedVariant, onSelectVariant, previewData, l
     );
   }
 
-  // View 1: Data Variant Selection Grid
-  if (!selectedVariant) {
-    return (
-      <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{scenario.title}</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginBottom: '40px' }}>
-          {scenario.description}
-        </p>
+  const getScenarioAssets = (title) => {
+    const map = {
+      'The Smart Greenhouse': { bg: '/smart_greenhouse_bg.png', video: 'w77zPAtVTuI' },
+      'The Paper Plane Lab': { bg: '/paper_plane_lab_bg.png', video: 'aircAruvnKk' },
+      'The Bean Sprout Project': { bg: '/bean_sprout_project_bg.png', video: 'w77zPAtVTuI' },
+      'The Study Score Predictor': { bg: '/study_score_predictor_bg.png', video: 'aircAruvnKk' },
+      'The Lemonade Stand': { bg: '/lemonade_stand_bg.png', video: 'aircAruvnKk' },
+      'The Speedrun Timer': { bg: '/speedrun_timer_bg.png', video: 'aircAruvnKk' },
+      'The Bike Brake Test': { bg: '/bike_brake_test_bg.png', video: 'aircAruvnKk' },
+      'The Chat Moderator': { bg: '/chat_moderator_bg.png', video: 'aircAruvnKk' },
+      'The Spam Catcher': { bg: '/spam_catcher_bg.png', video: 'aircAruvnKk' },
+      'The Smart Trash Can': { bg: '/smart_trash_can_bg.png', video: 'aircAruvnKk' },
+      'The Gaming Bot Detector': { bg: '/gaming_bot_detector_bg.png', video: 'aircAruvnKk' },
+      'The Forest Forager': { bg: '/forest_forager_bg.png', video: 'w77zPAtVTuI' },
+      'The Dog Translator': { bg: '/dog_translator_bg.png', video: 'aircAruvnKk' },
+      'The Magic Potion Sorter': { bg: '/magic_potion_sorter_bg.png', video: 'aircAruvnKk' },
+      'The Self-Driving Eye': { bg: '/self_driving_eye_bg.png', video: 'aircAruvnKk' },
+      'The Emotion Reader': { bg: '/emotion_reader_bg.png', video: 'aircAruvnKk' },
+    };
+    return map[title] || { bg: null, video: null };
+  };
 
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', color: 'var(--accent-purple)' }}>Select a Dataset Variant</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-          {scenario.variants?.map((variant, index) => (
-            <div 
-              key={variant.name}
-              className="glass-panel"
-              onClick={() => onSelectVariant(variant.name)}
-              style={{
-                padding: '25px', cursor: 'pointer', transition: 'all 0.2s',
-                borderTop: `3px solid ${index % 2 === 0 ? 'var(--accent-cyan)' : 'var(--accent-green)'}`
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                <Database size={20} color="var(--text-secondary)" />
-                <h3 style={{ fontSize: '1.2rem' }}>{variant.label}</h3>
-              </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                Load this specific data condition to see how the AI model reacts to it.
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const getBgStyle = () => {
+    const assets = getScenarioAssets(scenario?.title);
+    if (assets.bg) {
+      return {
+        backgroundImage: `url('${assets.bg}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        backgroundBlendMode: 'overlay',
+        backgroundColor: 'rgba(10, 15, 30, 0.85)',
+        minHeight: '100%',
+        borderRadius: '12px',
+        position: 'relative',
+        overflow: 'hidden'
+      };
+    }
+    return { minHeight: '100%', position: 'relative', overflow: 'hidden' };
+  };
 
-  // View 2: Variant Selected (Graph + Interpretation)
-  const chartData = previewData?.rows?.map((row, index) => {
-    const obj = { name: `R${index + 1}` };
+  const handleVariantClick = (name) => {
+    onSelectVariant(name);
+    setAnimationStep('data_review');
+  };
+
+  const handleNextToTrain = () => {
+    setAnimationStep('feeding_training');
+    onRunModel();
+  };
+
+  const featureCols = previewData?.columns ? previewData.columns.slice(0, -1) : [];
+  const yCol = previewData?.columns ? previewData.columns[previewData.columns.length - 1] : '';
+
+  const chartData = previewData?.rows?.map((row) => {
+    const obj = {};
     previewData.columns.forEach((col, i) => { obj[col] = row[i]; });
     return obj;
   }) || [];
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto' }}>
-      
-      {/* Header block with Back button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
-        <div>
-          <button 
-            onClick={() => onSelectVariant(null)}
-            style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', marginBottom: '10px', fontSize: '0.9rem' }}
+    <div style={{ ...getBgStyle(), padding: '40px' }}>
+      <AnimatePresence mode="popLayout">
+        
+        {/* View 1: Selection */}
+        {animationStep === 'selection' && (
+          <motion.div 
+            key="selection" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: '1000px', margin: '0 auto' }}
           >
-            ← Back to Datasets
-          </button>
-          <h1 style={{ fontSize: '2rem', marginBottom: '5px' }}>{scenario.variants.find(v => v.name === selectedVariant)?.label}</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>{scenario.title}</p>
-        </div>
-        <button 
-          className="btn-primary" 
-          onClick={onRunModel}
-          disabled={isTraining || loading}
-          style={{ fontSize: '1.1rem', padding: '12px 30px', opacity: (isTraining || loading) ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <Zap size={18} /> {isTraining ? 'Training...' : 'Run Model'}
-        </button>
-      </div>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{scenario.title}</h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginBottom: '40px' }}>
+              {scenario.description}
+            </p>
 
-      {/* The Visual Chart Area */}
-      {previewData && !loading && (
-        <div className="glass-panel" style={{ height: '350px', padding: '20px', marginBottom: '30px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="name" stroke="var(--text-secondary)" tick={{fontSize: 12}} />
-              <YAxis stroke="var(--text-secondary)" tick={{fontSize: 12}} />
-              <Tooltip contentStyle={{ background: 'var(--bg-panel)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }} />
-              <Line type="monotone" dataKey={previewData.columns[previewData.columns.length - 1]} stroke="var(--accent-cyan)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Data Interpretation Panel */}
-      {interpretData && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-          <div className="glass-panel" style={{ padding: '25px' }}>
-            <h3 style={{ marginBottom: '15px', color: 'var(--accent-purple)' }}>Data Story & Preprocessing</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {interpretData.column_descriptions.slice(0, 3).map(col => (
-                <div key={col.name}>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', marginBottom: '4px' }}>{col.name}</strong>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4', display: 'block' }}>{col.description}</span>
-                  {col.has_anomalies && (
-                    <div style={{ marginTop: '6px', color: '#ffb86c', fontSize: '0.8rem', background: 'rgba(255, 184, 108, 0.1)', padding: '8px', borderRadius: '4px', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-                      <AlertTriangle size={14} style={{ marginTop: '2px' }} />
-                      <span>{col.anomaly_note}</span>
-                    </div>
-                  )}
-                </div>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', color: 'var(--accent-purple)' }}>Select a Dataset Variant</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+              {scenario.variants?.map((variant, index) => (
+                <motion.div 
+                  key={variant.name}
+                  layoutId={`variant-card-${variant.name}`}
+                  onClick={() => handleVariantClick(variant.name)}
+                  whileHover={{ translateY: -5 }}
+                  className="glass-panel"
+                  style={{
+                    padding: '25px', cursor: 'pointer',
+                    borderTop: `3px solid ${index % 2 === 0 ? 'var(--accent-cyan)' : 'var(--accent-green)'}`,
+                    background: 'rgba(15, 23, 42, 0.7)',
+                    backdropFilter: 'blur(12px)',
+                    zIndex: 2
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                    <Database size={20} color="var(--text-secondary)" />
+                    <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{variant.label}</h3>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+                    Load this specific data condition to see how the AI model reacts to it.
+                  </p>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
+        )}
 
-          <div className="glass-panel" style={{ padding: '25px', borderColor: interpretData.bias_analysis.severity !== 'None' ? 'var(--accent-red)' : 'var(--glass-border)' }}>
-            <h3 style={{ marginBottom: '15px', color: interpretData.bias_analysis.severity !== 'None' ? 'var(--accent-red)' : 'var(--accent-green)' }}>
-              Bias & Ethics Check
-            </h3>
-            <div style={{ marginBottom: '15px' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Detected Issue</span>
-              <p style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--text-primary)' }}>{interpretData.bias_analysis.bias_type}</p>
+        {/* View 2: Data Review */}
+        {animationStep === 'data_review' && (
+          <motion.div 
+            key="data_review" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <button 
+                  onClick={() => onSelectVariant(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', marginBottom: '10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                >
+                  <ArrowLeft size={16} /> Back to Datasets
+                </button>
+                <h1 style={{ fontSize: '2rem', marginBottom: '5px' }}>{scenario.variants.find(v => v.name === selectedVariant)?.label}</h1>
+                <p style={{ color: 'var(--text-secondary)' }}>{scenario.variants.find(v => v.name === selectedVariant)?.description}</p>
+              </div>
+              <button 
+                className="btn-primary" 
+                onClick={handleNextToTrain}
+                disabled={loading}
+                style={{ fontSize: '1.1rem', padding: '12px 30px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                Next: Train Model <ArrowRight size={18} />
+              </button>
             </div>
-            <p style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
-              {interpretData.bias_analysis.description}
-            </p>
-          </div>
-        </div>
-      )}
 
+            {/* The element morphing from the selected card */}
+            <motion.div 
+              layoutId={`variant-card-${selectedVariant}`} 
+              className="glass-panel" 
+              style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(15, 23, 42, 0.9)', zIndex: 10, position: 'relative' }}
+            >
+              {previewData && !loading && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ height: '350px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis dataKey={featureCols[0]} name={featureCols[0]} type="number" stroke="var(--text-secondary)" tick={{fontSize: 12}} />
+                      <YAxis dataKey={yCol} name={yCol} type={scenario.model_type.toLowerCase() === 'classification' ? 'category' : 'number'} stroke="var(--text-secondary)" tick={{fontSize: 12}} />
+                      <Tooltip cursor={{strokeDasharray: '3 3'}} contentStyle={{ background: 'var(--bg-panel)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }} />
+                      <Scatter name="Data Points" data={chartData} fill="var(--accent-cyan)" />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </motion.div>
+              )}
+
+              {interpretData && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '10px' }}>
+                  <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                    <h3 style={{ marginBottom: '10px', color: 'var(--accent-purple)', fontSize: '1.1rem' }}>Data Overview</h3>
+                    {interpretData.column_descriptions.slice(0, 3).map(col => (
+                      <div key={col.name} style={{ marginBottom: '8px' }}>
+                        <strong style={{ fontSize: '0.9rem' }}>{col.name}</strong>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block' }}>{col.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', borderLeft: interpretData.bias_analysis.severity !== 'None' ? '3px solid var(--accent-red)' : '3px solid var(--accent-green)' }}>
+                    <h3 style={{ marginBottom: '10px', color: interpretData.bias_analysis.severity !== 'None' ? 'var(--accent-red)' : 'var(--accent-green)', fontSize: '1.1rem' }}>Bias Check</h3>
+                    <strong style={{ fontSize: '0.9rem', display: 'block', marginBottom: '5px' }}>{interpretData.bias_analysis.bias_type}</strong>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>{interpretData.bias_analysis.description}</p>
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* View 3: Feeding & Training */}
+        {animationStep === 'feeding_training' && (
+          <motion.div 
+            key="feeding_training" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {/* The Video Model */}
+            <motion.div
+              layoutId="training-video-container"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              style={{ width: '600px', borderRadius: '16px', overflow: 'hidden', border: '4px solid var(--accent-purple)', boxShadow: '0 0 40px rgba(168, 85, 247, 0.4)', zIndex: 10, background: '#000' }}
+            >
+              <video 
+                src={trainingVideo} 
+                autoPlay loop muted playsInline
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+              />
+            </motion.div>
+
+            {/* Packet flying in */}
+            <motion.div 
+              layoutId={`variant-card-${selectedVariant}`} 
+              initial={{ x: -400, scale: 0.4, opacity: 1 }}
+              animate={{ x: -200, scale: 0.2, opacity: 0 }}
+              transition={{ duration: 1.5, ease: "easeInOut", delay: 0.5 }}
+              className="glass-panel"
+              style={{ position: 'absolute', padding: '15px 30px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--accent-cyan)', color: '#000', zIndex: 20 }}
+            >
+              <Package size={24} />
+              <span style={{ fontWeight: 'bold' }}>Input Data</span>
+            </motion.div>
+            
+            <h2 style={{ position: 'absolute', top: '10%', fontSize: '2rem', color: 'var(--accent-cyan)' }}>Training Model...</h2>
+          </motion.div>
+        )}
+
+        {/* View 4: Trained Output */}
+        {animationStep === 'trained' && (
+          <motion.div 
+            key="trained" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {/* The Video Model (Still present, paused/looping) */}
+            <motion.div
+              layoutId="training-video-container"
+              style={{ width: '600px', borderRadius: '16px', overflow: 'hidden', border: '4px solid var(--accent-green)', boxShadow: '0 0 40px rgba(74, 222, 128, 0.4)', zIndex: 10, background: '#000' }}
+            >
+              <video 
+                src={trainingVideo} 
+                autoPlay loop muted playsInline
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+              />
+            </motion.div>
+
+            {/* Packet flying out */}
+            <motion.div 
+              layoutId="output-packet"
+              initial={{ x: 0, scale: 0, opacity: 0 }}
+              animate={{ x: 400, scale: 0.8, opacity: 1 }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="glass-panel"
+              style={{ position: 'absolute', padding: '15px 30px', borderRadius: '30px', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--accent-green)', color: '#000', zIndex: 20 }}
+            >
+              <Package size={24} />
+              <span style={{ fontWeight: 'bold' }}>Trained Model</span>
+            </motion.div>
+            
+            <h2 style={{ position: 'absolute', top: '10%', fontSize: '2rem', color: 'var(--accent-green)' }}>Training Complete!</h2>
+          </motion.div>
+        )}
+
+        {/* View 5: Robot Predict */}
+        {animationStep === 'robot_predict' && (
+          <motion.div 
+            key="robot_predict" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}
+          >
+            <motion.div 
+              layoutId="output-packet"
+              className="glass-panel"
+              style={{ maxWidth: '800px', width: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: '40px', borderRadius: '24px', background: 'rgba(15, 23, 42, 0.95)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '30px' }}>
+                <motion.div 
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.3, type: 'spring' }}
+                  style={{ 
+                    width: '100px', height: '100px', borderRadius: '50%', 
+                    background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-green))',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    boxShadow: '0 10px 30px rgba(74, 222, 128, 0.3)'
+                  }}>
+                  <Bot size={50} color="#000" />
+                </motion.div>
+
+                <div style={{ flex: 1 }}>
+                  <h2 style={{ marginBottom: '15px', fontSize: '1.8rem', color: 'var(--text-primary)' }}>Hi! I'm your trained model. 🤖</h2>
+                  <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '25px', fontSize: '1.1rem' }}>
+                    I've reviewed the <strong>{scenario.variants.find(v => v.name === selectedVariant)?.label}</strong> dataset and found the underlying patterns. 
+                    Give me some new feature values below, and I'll predict the outcome!
+                  </p>
+
+                  <div style={{ background: 'rgba(0,0,0,0.4)', padding: '25px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                    <h4 style={{ color: 'var(--accent-green)', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.9rem' }}>Ask a Question</h4>
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {featureCols.map(col => (
+                        <input 
+                          key={col}
+                          type="number" 
+                          placeholder={`Enter ${col}...`}
+                          id={`predict-input-${col}`}
+                          style={{ padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.05)', color: '#FFF', flex: 1, minWidth: '130px', fontSize: '1rem' }}
+                        />
+                      ))}
+                      <button 
+                        className="btn-primary"
+                        onClick={async () => {
+                          const features = {};
+                          for (const col of featureCols) {
+                            const val = document.getElementById(`predict-input-${col}`).value;
+                            if (!val) {
+                              alert(`Please enter a value for ${col}`);
+                              return;
+                            }
+                            features[col] = Number(val);
+                          }
+
+                          try {
+                            document.getElementById('predict-result').innerText = 'Thinking...';
+                            const res = await api.post(`/${scenario.model_type.toLowerCase()}/predict/`, {
+                              experiment_id: experimentResult.experiment_id,
+                              features: features
+                            });
+                            document.getElementById('predict-result').innerText = `Prediction for ${yCol}: ${res.data.prediction.toFixed ? res.data.prediction.toFixed(2) : res.data.prediction}`;
+                          } catch (e) {
+                            document.getElementById('predict-result').innerText = `Error: ${e.response?.data?.error || e.message}`;
+                          }
+                        }}
+                        style={{ padding: '12px 25px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        Predict <Zap size={18} />
+                      </button>
+                    </div>
+                    <div style={{ marginTop: '20px', minHeight: '30px' }}>
+                      <strong id="predict-result" style={{ fontSize: '1.4rem', color: 'var(--accent-green)' }}></strong>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '25px', textAlign: 'right' }}>
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => onSelectVariant(null)}
+                      style={{ fontSize: '1rem' }}
+                    >
+                      Start Over
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* View 6: Error */}
+        {animationStep === 'error' && (
+          <motion.div 
+            key="error" 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            exit={{ opacity: 0 }}
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <div className="glass-panel" style={{ padding: '40px', maxWidth: '600px', textAlign: 'center', border: '1px solid var(--accent-red)' }}>
+              <AlertTriangle size={60} color="var(--accent-red)" style={{ marginBottom: '20px' }} />
+              <h2 style={{ fontSize: '2rem', marginBottom: '15px', color: 'var(--accent-red)' }}>Training Failed</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginBottom: '30px' }}>
+                Oops! The model encountered an error during training: <br/><br/>
+                <strong style={{ color: '#fff', background: 'rgba(255, 51, 102, 0.1)', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>{experimentError}</strong>
+              </p>
+              <button 
+                className="btn-primary"
+                onClick={() => setAnimationStep('data_review')}
+                style={{ fontSize: '1.1rem', padding: '10px 30px' }}
+              >
+                Try Again
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+      </AnimatePresence>
     </div>
   );
 };

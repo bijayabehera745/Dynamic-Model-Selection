@@ -73,11 +73,17 @@ def run_experiment(
 
     # ── 3. Generate Python code via Gemini ────────────────────────────────
     try:
+        import pandas as pd
+        import io
+        df_preview = pd.read_csv(io.BytesIO(csv_bytes), nrows=0)
+        data_columns = ", ".join(df_preview.columns.tolist())
+        
         code = llm.generate_code(
             model_type='REGRESSION',
             scenario_title=scenario.title,
             variant_label=variant.label,
             student_prompt=student_prompt,
+            data_columns=data_columns,
         )
     except Exception as e:
         logger.error(f'[regression executor] LLM code generation failed: {e}')
@@ -116,6 +122,7 @@ def run_experiment(
         stdout_log     = sandbox_result['stdout'],
         stderr_log     = sandbox_result['stderr'],
         output_image   = sandbox_result['output_image'] or '',
+        model_b64      = sandbox_result.get('model_b64') or '',
         explanation    = explanation,
         data_source    = data_source,
         status         = 'SUCCESS' if sandbox_result['success'] else 'FAILED',

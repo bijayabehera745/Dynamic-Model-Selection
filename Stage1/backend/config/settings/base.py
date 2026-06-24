@@ -14,6 +14,7 @@ load_dotenv(BASE_DIR.parent.parent / '.env')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-fallback-change-me')
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     'regression.apps.RegressionConfig',
     'classification.apps.ClassificationConfig',
     'neural_network.apps.NeuralNetworkConfig',
+    'agentic_flow.apps.AgenticFlowConfig',
 ]
 
 MIDDLEWARE = [
@@ -76,12 +78,8 @@ DATABASES = {
 AUTH_USER_MODEL = 'accounts.Student'
 
 # ─── Password Validation ──────────────────────────────────────────────────────
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
+# For an educational app targeting middle schoolers, we disable strict password requirements.
+AUTH_PASSWORD_VALIDATORS = []
 
 # ─── Localisation ─────────────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'
@@ -123,3 +121,22 @@ SIMPLE_JWT = {
 
 # ─── Gemini API Key (accessible via settings.GEMINI_API_KEY anywhere) ─────────
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
+# Celery & Redis Configuration
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+# Django Channels Configuration
+ASGI_APPLICATION = "config.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": ["redis://127.0.0.1:6379/1"],
+        },
+    },
+}

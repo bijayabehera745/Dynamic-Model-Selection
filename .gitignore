@@ -53,3 +53,13 @@ Thumbs.db
 
 # Project specific ignores (if any generated data/scratch files)
 scratch/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+*.pid
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/

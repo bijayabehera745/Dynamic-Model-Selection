@@ -5,6 +5,7 @@ from .views import (
     RegressionUploadRunView,
     RegressionResultsListView,
     RegressionResultDetailView,
+    RegressionPredictView,
 )
 
 urlpatterns = [
@@ -14,6 +15,7 @@ urlpatterns = [
     # Experiment execution — requires auth
     path('run/',              RegressionRunView.as_view(),         name='regression-run'),
     path('upload-run/',       RegressionUploadRunView.as_view(),   name='regression-upload-run'),
+    path('predict/',          RegressionPredictView.as_view(),     name='regression-predict'),
 
     # Result history
     path('results/',          RegressionResultsListView.as_view(), name='regression-results'),

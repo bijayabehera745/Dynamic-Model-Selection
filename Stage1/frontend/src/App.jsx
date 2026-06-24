@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import LabWorkspace from './pages/LabWorkspace';
+import AgenticLanding from './pages/AgenticSandbox/AgenticLanding';
 import './index.css';
 
 const AppContent = () => {
@@ -29,11 +30,18 @@ const AppContent = () => {
 
   // Student Routing
   if (currentView === 'dashboard') {
-    return <StudentDashboard onNavigateToLab={() => setCurrentView('lab')} />;
+    return <StudentDashboard 
+             onNavigateToLab={() => setCurrentView('lab')} 
+             onNavigateToAgentic={() => setCurrentView('agentic')} 
+           />;
   }
 
   if (currentView === 'lab') {
     return <LabWorkspace onBackToDashboard={() => setCurrentView('dashboard')} />;
+  }
+
+  if (currentView === 'agentic') {
+    return <AgenticLanding onBackToDashboard={() => setCurrentView('dashboard')} />;
   }
 };
 

@@ -158,3 +158,79 @@ class RegressionResultDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return RegressionExperiment.objects.filter(student=self.request.user)
+
+
+class RegressionPredictView(APIView):
+    """
+    POST /api/v1/regression/predict/
+    Body: { experiment_id, features: { colName: val } }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        experiment_id = request.data.get('experiment_id')
+        features = request.data.get('features')
+
+        if not experiment_id or not features:
+            return Response({'error': 'experiment_id and features are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            experiment = RegressionExperiment.objects.get(id=experiment_id, student=request.user)
+        except RegressionExperiment.DoesNotExist:
+            return Response({'error': 'Experiment not found or access denied.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not experiment.model_b64:
+            return Response({'error': 'No trained model available for this experiment.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import base64, json
+        from core.sandbox import run_in_sandbox
+
+        model_bytes = base64.b64decode(experiment.model_b64)
+        input_json = json.dumps(features).encode('utf-8')
+
+        script_code = '''
+import joblib
+import pandas as pd
+import json
+
+try:
+    model = joblib.load('/app/data/model.pkl')
+    with open('/app/data/test_input.json') as f:
+        data = json.load(f)
+    
+    # If the model was trained with specific column names, we need a DataFrame
+    df = pd.DataFrame([data])
+    pred = model.predict(df)
+    
+    # Simple output logic depending on if prediction is scalar or array
+    result = pred.tolist()
+    if isinstance(result, list) and len(result) > 0:
+        result = result[0]
+        if isinstance(result, list): # handle [[val]] vs [val]
+            result = result[0]
+            
+    print(json.dumps({'prediction': result}))
+except Exception as e:
+    print(json.dumps({'error': str(e)}))
+'''
+        result = run_in_sandbox(
+            sandbox_image='regression-sandbox',
+            script_code=script_code,
+            input_files={
+                'model.pkl': model_bytes,
+                'test_input.json': input_json
+            },
+            timeout=10
+        )
+
+        if result['success']:
+            try:
+                # The script prints JSON to stdout
+                out_data = json.loads(result['stdout'])
+                if 'error' in out_data:
+                    return Response({'error': out_data['error']}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(out_data, status=status.HTTP_200_OK)
+            except json.JSONDecodeError:
+                return Response({'error': 'Failed to parse model output.', 'raw': result['stdout']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response({'error': 'Prediction failed.', 'details': result['stderr']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -71,3 +71,55 @@ class ProfileView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
+class GoogleLoginView(APIView):
+    """POST /api/v1/auth/google/"""
+    permission_classes = [AllowAny]
+
+
+    def post(self, request):
+        token = request.data.get('credential')
+        if not token:
+            return Response({"error": "No credential provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # The client ID used in the frontend must match the audience here
+            CLIENT_ID = "1021205941453-dnbrm6b1lk2ti7o4r24r6tqobmo6k8t5.apps.googleusercontent.com"
+            idinfo = id_token.verify_oauth2_token(
+                token, 
+                requests.Request(), 
+                CLIENT_ID, 
+                clock_skew_in_seconds=10
+            )
+            
+            email = idinfo['email']
+            name = idinfo.get('name', 'Student')
+            
+            # Find or create student properly using the custom manager if creating
+            student = Student.objects.filter(email=email).first()
+            if not student:
+                student = Student.objects.create_user(email=email, name=name, grade=8)
+            
+            # Generate tokens
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(student)
+            
+            return Response(
+                {
+                    'message': 'Logged in successfully.',
+                    'student': StudentProfileSerializer(student).data,
+                    'tokens': {
+                        'access': str(refresh.access_token),
+                        'refresh': str(refresh),
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except ValueError as e:
+            # Print to backend console for debugging if needed
+            print(f"Google Auth Error: {e}")
+            return Response({"error": f"Invalid token: {e}"}, status=status.HTTP_400_BAD_REQUEST)

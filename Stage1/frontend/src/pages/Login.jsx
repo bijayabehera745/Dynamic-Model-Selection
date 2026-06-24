@@ -1,20 +1,41 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState('');
+  const [grade, setGrade] = useState(8);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isAdminLogin, setIsAdminLogin] = useState(false);
-  const { login } = useContext(AuthContext);
+  const { login, register, googleLogin } = useContext(AuthContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     try {
-      await login(email, password);
+      if (isRegistering && !isAdminLogin) {
+        await register(name, email, password, grade);
+      } else {
+        await login(email, password, isAdminLogin);
+      }
     } catch (err) {
-      setError('Invalid credentials. Please try again.');
+      if (err.response && err.response.data) {
+        // Extract the first error message from the backend response
+        const data = err.response.data;
+        if (data.email) setError('Email: ' + data.email[0]);
+        else if (data.password) setError('Password: ' + data.password[0]);
+        else if (data.detail) setError(data.detail);
+        else setError(isRegistering ? 'Registration failed.' : 'Invalid credentials. Please try again.');
+      } else {
+        setError(isRegistering ? 'Registration failed.' : 'Invalid credentials. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -64,6 +85,31 @@ const Login = () => {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {isRegistering && !isAdminLogin && (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '500' }}>Full Name</label>
+                <input 
+                  type="text" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                  placeholder="Ada Lovelace"
+                  required 
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '500' }}>Grade / Class</label>
+                <input 
+                  type="number" 
+                  min="6" max="12"
+                  value={grade} 
+                  onChange={(e) => setGrade(Number(e.target.value))} 
+                  required 
+                />
+              </div>
+            </>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '14px', fontWeight: '500' }}>Email Address</label>
             <input 
@@ -88,16 +134,45 @@ const Login = () => {
 
           <button 
             type="submit" 
+            disabled={isLoading}
             style={{ 
-              background: isAdminLogin ? 'linear-gradient(135deg, var(--accent-purple), #FF00FF)' : 'linear-gradient(135deg, var(--accent-cyan), var(--accent-purple))',
-              color: 'white', border: 'none', padding: '12px 20px', borderRadius: '8px',
-              fontFamily: 'Outfit', fontWeight: '600', fontSize: '1rem', cursor: 'pointer',
+              background: isLoading ? 'var(--glass-border)' : (isAdminLogin ? 'linear-gradient(135deg, var(--accent-purple), #FF00FF)' : 'linear-gradient(135deg, var(--accent-cyan), var(--accent-purple))'),
+              color: isLoading ? 'var(--text-secondary)' : 'white', border: 'none', padding: '12px 20px', borderRadius: '8px',
+              fontFamily: 'Outfit', fontWeight: '600', fontSize: '1rem', cursor: isLoading ? 'wait' : 'pointer',
               marginTop: '10px', transition: 'transform 0.2s'
             }}
           >
-            {isAdminLogin ? 'Enter Admin Panel' : 'Enter Lab'}
+            {isLoading ? 'Authenticating...' : (isAdminLogin ? 'Enter Admin Panel' : (isRegistering ? 'Create Account' : 'Enter Lab'))}
           </button>
         </form>
+
+        {!isAdminLogin && (
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
+              <GoogleLogin
+                onSuccess={credentialResponse => {
+                  googleLogin(credentialResponse.credential).catch(err => {
+                    const msg = err.response?.data?.error || err.message;
+                    setError(`Google Login failed: ${msg}`);
+                  });
+                }}
+                onError={() => {
+                  setError('Google Login failed.');
+                }}
+                theme="filled_black"
+                shape="pill"
+                text="signin_with"
+                width="100%"
+              />
+            </div>
+            <button 
+              onClick={() => setIsRegistering(!isRegistering)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
+            >
+              {isRegistering ? 'Already have an account? Log in' : 'Need an account? Sign up'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

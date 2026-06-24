@@ -29,11 +29,17 @@ def run_experiment(student, scenario_id, variant_name, student_prompt='', upload
         csv_bytes   = get_dataset(scenario.title, variant_name)
         data_source = 'PRELOADED'
 
+    import pandas as pd
+    import io
+    df_preview = pd.read_csv(io.BytesIO(csv_bytes), nrows=0)
+    data_columns = ", ".join(df_preview.columns.tolist())
+
     code = llm.generate_code(
         model_type='CLASSIFICATION',
         scenario_title=scenario.title,
         variant_label=variant.label,
         student_prompt=student_prompt,
+        data_columns=data_columns,
     )
 
     sandbox_result = run_in_sandbox(

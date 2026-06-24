@@ -16,6 +16,7 @@ const LabWorkspace = ({ onBackToDashboard }) => {
   const [loadingPreview, setLoadingPreview] = useState(false);
   
   const [experimentResult, setExperimentResult] = useState(null);
+  const [experimentError, setExperimentError] = useState(null);
   const [isTraining, setIsTraining] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
@@ -77,6 +78,7 @@ const LabWorkspace = ({ onBackToDashboard }) => {
     setIsTraining(true);
     setShowResults(false);
     setExperimentResult(null);
+    setExperimentError(null);
     try {
       const response = await api.post(`/${activeModule}/run/`, {
         scenario_id: selectedScenario.id,
@@ -87,6 +89,7 @@ const LabWorkspace = ({ onBackToDashboard }) => {
       setShowResults(true);
     } catch (err) {
       console.error("Experiment failed", err);
+      setExperimentError(err.response?.data?.error || err.message);
     } finally {
       setIsTraining(false);
     }
@@ -117,6 +120,8 @@ const LabWorkspace = ({ onBackToDashboard }) => {
           loading={loadingPreview}
           onRunModel={handleRunModel}
           isTraining={isTraining}
+          experimentResult={experimentResult}
+          experimentError={experimentError}
         />
 
         {/* OVERLAY: Results frosted glass card */}

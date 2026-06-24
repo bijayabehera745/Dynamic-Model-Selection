@@ -5,15 +5,10 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
-    # ── Auth ─────────────────────────────────────────────────────────────────
     path('api/v1/auth/', include('accounts.urls')),
-
-    # ── Scenario Catalog ─────────────────────────────────────────────────────
     path('api/v1/scenarios/', include('scenarios.urls')),
-
-    # ── Model-specific endpoints ──────────────────────────────────────────────
     path('api/v1/regression/', include('regression.urls')),
     path('api/v1/classification/', include('classification.urls')),
     path('api/v1/neural/', include('neural_network.urls')),
+    path('api/v1/agentic/', include('agentic_flow.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

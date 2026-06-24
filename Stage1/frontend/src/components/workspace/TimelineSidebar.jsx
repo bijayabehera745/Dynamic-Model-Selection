@@ -21,12 +21,19 @@ const TimelineSidebar = ({
           onClick={onBackToDashboard}
           style={{ 
             background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', fontSize: '0.9rem'
+            display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', fontSize: '0.9rem'
           }}
         >
           <ArrowLeft size={16} /> Back to Dashboard
         </button>
-        <h2 style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>Prediction Engine</h2>
+        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+          <img 
+            src="/ai_sidebar_img.png" 
+            alt="AI Brain" 
+            style={{ width: '100px', height: '100px', borderRadius: '20px', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', marginBottom: '10px' }} 
+          />
+        </div>
+        <h2 style={{ fontSize: '1.4rem', color: 'var(--accent-cyan)', textAlign: 'center' }}>Prediction Engine</h2>
       </div>
 
       {/* Module Selector */}

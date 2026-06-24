@@ -42,6 +42,9 @@ class RegressionExperiment(models.Model):
     data_source  = models.CharField(max_length=20, choices=DATA_SOURCE_CHOICES, default='PRELOADED')
     uploaded_csv = models.FileField(upload_to='uploads/regression/', null=True, blank=True)
 
+    # Persisted trained model binary as base64 string
+    model_b64    = models.TextField(blank=True)
+
     status     = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
 
