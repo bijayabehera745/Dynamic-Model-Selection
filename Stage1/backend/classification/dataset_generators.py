@@ -453,6 +453,14 @@ def _title_to_slug(title: str) -> str:
 
 
 def get_dataset(scenario_title: str, variant_name: str) -> bytes:
+    from scenarios.models import DataVariant
+    try:
+        variant = DataVariant.objects.get(scenario__title=scenario_title, name=variant_name)
+        if variant.data_payload:
+            return variant.data_payload.encode('utf-8')
+    except DataVariant.DoesNotExist:
+        pass
+
     slug = _title_to_slug(scenario_title)
     key  = (slug, variant_name)
     if key not in GENERATORS:

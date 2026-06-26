@@ -39,6 +39,8 @@ class Scenario(models.Model):
         return f'[{self.model_type}] {self.title}'
 
 
+from django.conf import settings
+
 class DataVariant(models.Model):
     """
     A specific data variant for a scenario.
@@ -50,10 +52,15 @@ class DataVariant(models.Model):
     label       = models.CharField(max_length=100, help_text='Human-readable name shown in UI')
     description = models.TextField()
     order       = models.PositiveIntegerField(default=0)
+    
+    # New fields for Data Lab
+    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='custom_variants')
+    data_payload = models.TextField(blank=True, null=True, help_text='JSON string of processed data or Base64 string for images')
 
     class Meta:
         ordering = ['order']
-        unique_together = ('scenario', 'name')
+        # Allow different users to have a variant with the same name (e.g. "my_data")
+        unique_together = ('scenario', 'name', 'user')
 
     def __str__(self):
         return f'{self.scenario.title} — {self.label}'

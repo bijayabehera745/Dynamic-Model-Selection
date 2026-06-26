@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import TimelineSidebar from '../components/workspace/TimelineSidebar';
 import DataCanvas from '../components/workspace/DataCanvas';
 import ResultsOverlay from '../components/workspace/ResultsOverlay';
 import api from '../api';
+import { ArrowLeft, Beaker } from 'lucide-react';
 
 const LabWorkspace = ({ onBackToDashboard }) => {
-  const [activeModule, setActiveModule] = useState('regression');
   const [scenarios, setScenarios] = useState([]);
   const [selectedScenario, setSelectedScenario] = useState(null);
-  
-  // selectedVariant is now null by default to show the Variant Cards Grid
   const [selectedVariant, setSelectedVariant] = useState(null);
   
   const [previewData, setPreviewData] = useState(null);
@@ -20,47 +17,31 @@ const LabWorkspace = ({ onBackToDashboard }) => {
   const [isTraining, setIsTraining] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  // 1. Fetch scenarios when module changes
+  // Fetch all scenarios
   useEffect(() => {
     const fetchScenarios = async () => {
       try {
         const response = await api.get('/scenarios/');
-        const filtered = response.data.filter(s => s.model_type.toLowerCase() === activeModule);
-        setScenarios(filtered);
-        
-        // Auto-select first scenario if available, but DO NOT auto-select variant
-        if (filtered.length > 0) {
-          setSelectedScenario(filtered[0]);
-          setSelectedVariant(null);
-        } else {
-          setSelectedScenario(null);
-          setSelectedVariant(null);
-        }
+        // We fetch ALL scenarios, not filtered by activeModule
+        setScenarios(response.data);
       } catch (err) {
         console.error("Failed to fetch scenarios", err);
       }
     };
     fetchScenarios();
-  }, [activeModule]);
+  }, []);
 
-  // 2. Fetch preview data when a specific variant is selected
   useEffect(() => {
     if (selectedScenario && selectedVariant) {
       fetchPreview();
     }
   }, [selectedScenario, selectedVariant]);
 
-  const handleScenarioSelect = (scenario) => {
-    setSelectedScenario(scenario);
-    setSelectedVariant(null); // Reset variant so user sees the cards
-    setPreviewData(null);
-  };
-
   const fetchPreview = async () => {
     setLoadingPreview(true);
     setPreviewData(null);
     try {
-      const response = await api.get(`/${activeModule}/preview/`, {
+      const response = await api.get(`/${selectedScenario.model_type.toLowerCase()}/preview/`, {
         params: {
           scenario_id: selectedScenario.id,
           variant_name: selectedVariant
@@ -80,7 +61,7 @@ const LabWorkspace = ({ onBackToDashboard }) => {
     setExperimentResult(null);
     setExperimentError(null);
     try {
-      const response = await api.post(`/${activeModule}/run/`, {
+      const response = await api.post(`/${selectedScenario.model_type.toLowerCase()}/run/`, {
         scenario_id: selectedScenario.id,
         variant_name: selectedVariant,
         student_prompt: ''
@@ -95,22 +76,68 @@ const LabWorkspace = ({ onBackToDashboard }) => {
     }
   };
 
+  if (!selectedScenario) {
+    // RENDER FULL-SCREEN GRID OF SCENARIOS
+    return (
+      <div style={{ padding: '40px', height: '100vh', overflowY: 'auto' }}>
+        <button className="btn-secondary" onClick={onBackToDashboard} style={{ marginBottom: '30px' }}>
+          <ArrowLeft size={18} /> Back to Dashboard
+        </button>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}><Beaker size={36} style={{ verticalAlign: 'middle', marginRight: '10px' }} /> Prediction Engine</h1>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '40px' }}>Select an experiment below to start training AI models!</p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          {scenarios.map(scenario => (
+            <div 
+              key={scenario.id}
+              className="glass-panel"
+              onClick={() => {
+                setSelectedScenario(scenario);
+                setSelectedVariant(null);
+                setPreviewData(null);
+              }}
+              style={{
+                cursor: 'pointer',
+                padding: '20px',
+                transition: 'transform 0.2s',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <div style={{ fontSize: '3rem' }}>{scenario.icon}</div>
+              <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{scenario.title}</h3>
+              <span style={{ fontSize: '0.8rem', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>
+                {scenario.model_type.replace('_', ' ')}
+              </span>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', flex: 1 }}>{scenario.challenge}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       
-      {/* LEFT: Timeline Navigation */}
-      <div style={{ width: '320px', borderRight: '1px solid var(--glass-border)' }}>
-        <TimelineSidebar 
-          activeModule={activeModule}
-          setActiveModule={setActiveModule}
-          scenarios={scenarios}
-          selectedScenario={selectedScenario}
-          onSelectScenario={handleScenarioSelect}
-          onBackToDashboard={onBackToDashboard}
-        />
+      {/* Top Header with Back Button */}
+      <div style={{ padding: '15px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', background: 'rgba(10, 15, 30, 0.8)' }}>
+        <button 
+          className="btn-secondary" 
+          onClick={() => setSelectedScenario(null)}
+          style={{ padding: '8px 15px', marginRight: '20px' }}
+        >
+          <ArrowLeft size={18} /> Back to Scenarios
+        </button>
+        <h2 style={{ margin: 0, fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {selectedScenario.icon} {selectedScenario.title}
+        </h2>
       </div>
 
-      {/* RIGHT: Main Data Canvas */}
+      {/* Main Data Canvas */}
       <div style={{ flex: 1, position: 'relative', overflowY: 'auto' }}>
         <DataCanvas 
           scenario={selectedScenario}

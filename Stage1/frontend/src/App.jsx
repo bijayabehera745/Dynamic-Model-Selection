@@ -4,7 +4,10 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import LabWorkspace from './pages/LabWorkspace';
+import DataLabWorkspace from './pages/DataLabWorkspace';
 import AgenticLanding from './pages/AgenticSandbox/AgenticLanding';
+import AIFoundationsDashboard from './pages/AIFoundations/AIFoundationsDashboard';
+import EmergenceOfIntelligence from './pages/AIFoundations/EmergenceOfIntelligence';
 import './index.css';
 
 const AppContent = () => {
@@ -32,7 +35,9 @@ const AppContent = () => {
   if (currentView === 'dashboard') {
     return <StudentDashboard 
              onNavigateToLab={() => setCurrentView('lab')} 
+             onNavigateToDataLab={() => setCurrentView('data_lab')}
              onNavigateToAgentic={() => setCurrentView('agentic')} 
+             onNavigateToFoundations={() => setCurrentView('foundations')}
            />;
   }
 
@@ -40,8 +45,23 @@ const AppContent = () => {
     return <LabWorkspace onBackToDashboard={() => setCurrentView('dashboard')} />;
   }
 
+  if (currentView === 'data_lab') {
+    return <DataLabWorkspace onBackToDashboard={() => setCurrentView('dashboard')} />;
+  }
+
   if (currentView === 'agentic') {
     return <AgenticLanding onBackToDashboard={() => setCurrentView('dashboard')} />;
+  }
+
+  if (currentView === 'foundations') {
+    return <AIFoundationsDashboard 
+             onBackToDashboard={() => setCurrentView('dashboard')} 
+             onNavigateToLesson1={() => setCurrentView('emergence_lesson')}
+           />;
+  }
+
+  if (currentView === 'emergence_lesson') {
+    return <EmergenceOfIntelligence onBackToDashboard={() => setCurrentView('foundations')} />;
   }
 };
 

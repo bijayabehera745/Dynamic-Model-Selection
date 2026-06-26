@@ -54,12 +54,12 @@ const getId = () => `node_${id++}`;
 
 function Canvas({ onBackToDashboard, presetFlow, isExploreMode }) {
   const reactFlowWrapper = useRef(null);
-  const { getNodes, getEdges } = useReactFlow();
+  const { getNodes, getEdges, screenToFlowPosition } = useReactFlow();
   
-  const [nodes, setNodes, onNodesChange] = useNodesState(presetFlow ? presetFlow.nodes : initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(presetFlow ? presetFlow.edges : []);
+  const [nodes, setNodes, onNodesChange] = useNodesState(presetFlow?.nodes || initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(presetFlow?.edges || []);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const [workflowName, setWorkflowName] = useState(presetFlow ? presetFlow.name : 'My Awesome Flow');
+  const [workflowName, setWorkflowName] = useState(presetFlow?.name || 'My Awesome Flow');
   const [workflowId, setWorkflowId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -180,22 +180,22 @@ function Canvas({ onBackToDashboard, presetFlow, isExploreMode }) {
 
           if (data.status === 'completed' && data.output) {
             setNodes((nds) => nds.map((node) => {
-              // Add a checkmark to all nodes
               const updatedNode = { 
                 ...node, 
                 style: { ...node.style, boxShadow: 'none', border: '2px solid rgba(16, 185, 129, 0.5)' } 
               };
               
-              if (node.type === 'display') {
+              if (data.output && data.output[node.id] && (node.type === 'display' || node.type === 'chartGenerator')) {
+                const nodeOutput = data.output[node.id];
                 return {
-                  ...node,
+                  ...updatedNode,
                   data: {
                     ...node.data,
-                    output: typeof data.output === 'string' ? data.output : JSON.stringify(data.output)
+                    output: typeof nodeOutput === 'string' ? nodeOutput : JSON.stringify(nodeOutput)
                   }
                 };
               }
-              return node;
+              return updatedNode;
             }));
           }
           
@@ -234,27 +234,32 @@ function Canvas({ onBackToDashboard, presetFlow, isExploreMode }) {
 
   const onDrop = useCallback(
     (event) => {
-      event.preventDefault();
-      const type = event.dataTransfer.getData('application/reactflow');
-      const label = event.dataTransfer.getData('nodeLabel');
-      
-      if (typeof type === 'undefined' || !type) return;
+      try {
+        event.preventDefault();
+        const type = event.dataTransfer.getData('application/reactflow');
+        const label = event.dataTransfer.getData('nodeLabel');
+        
+        if (typeof type === 'undefined' || !type) return;
 
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
 
-      const newNode = {
-        id: getId(),
-        type,
-        position,
-        data: { label: label },
-      };
+        const newNode = {
+          id: getId(),
+          type,
+          position,
+          data: { label: label },
+        };
 
-      setNodes((nds) => nds.concat(newNode));
+        setNodes((nds) => nds.concat(newNode));
+      } catch (err) {
+        console.error("Error on drop:", err);
+        alert("Drop Error: " + err.message);
+      }
     },
-    [reactFlowInstance, setNodes]
+    [screenToFlowPosition, setNodes]
   );
 
   return (

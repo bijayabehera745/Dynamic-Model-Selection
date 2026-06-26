@@ -10,7 +10,7 @@ Two functions:
 """
 
 import logging
-from google import genai
+import openai
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -58,15 +58,24 @@ _SYSTEM_CONTEXT = {
 _EXPLANATION_SYSTEM = (
     "You are a friendly AI tutor explaining machine learning results to a middle-school "
     "student aged 12-14 who is learning about AI for the first time. "
-    "Use simple language, relatable analogies, and avoid technical jargon. "
-    "Be encouraging, curious, and concise (3-5 sentences max). "
-    "Focus on what the result MEANS in the context of the scenario, not the code."
+    "You MUST return a JSON object with exactly these 5 string keys: "
+    "\"chefs_choice\", \"healthy_snacks\", \"guessing_game\", \"tricky_test\", and \"fix_it_mode\". "
+    "Each key should contain a short (2-3 sentences max) engaging explanation for the following concepts:\n"
+    "- chefs_choice: Why did we pick this specific robot brain? (Model selection)\n"
+    "- healthy_snacks: What did we just feed our AI? (Data quality)\n"
+    "- guessing_game: Is our AI a Genius, a Guesser, or just Confused? (Model Evaluation/Confidence based on stdout)\n"
+    "- tricky_test: Can you trick the AI with a curveball? (Mention they can make their own tricky data in the Data Lab!)\n"
+    "- fix_it_mode: How can we make this AI even smarter next time?\n"
+    "Respond ONLY with valid JSON. Do not include markdown code blocks."
 )
 
 
-def _get_client() -> genai.Client:
-    """Return a configured Gemini client instance."""
-    return genai.Client(api_key=settings.GEMINI_API_KEY)
+def _get_client() -> openai.OpenAI:
+    """Return a configured OpenAI client instance pointing to OpenRouter."""
+    return openai.OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=settings.OPENROUTER_API_KEY,
+    )
 
 
 def generate_code(
@@ -78,16 +87,6 @@ def generate_code(
 ) -> str:
     """
     Generate a Python script for the sandbox.
-
-    Args:
-        model_type:      'REGRESSION' | 'CLASSIFICATION' | 'NEURAL_NETWORK'
-        scenario_title:  e.g. 'The Smart Greenhouse'
-        variant_label:   e.g. 'Messy Sensors (broken data)'
-        student_prompt:  Optional custom instruction from the student.
-        data_columns:    Comma-separated list of columns in the CSV.
-
-    Returns:
-        Raw Python source code as a string.
     """
     system_ctx = _SYSTEM_CONTEXT.get(model_type, _SYSTEM_CONTEXT['REGRESSION'])
 
@@ -100,17 +99,17 @@ def generate_code(
     if student_prompt:
         user_message += f"Student's additional instruction: {student_prompt}\n"
 
-    full_prompt = f"{system_ctx}\n\n{user_message}"
-
     try:
         client = _get_client()
-        response = client.models.generate_content(
-            model='gemini-3.0-flash',
-            contents=full_prompt,
+        response = client.chat.completions.create(
+            model='openai/gpt-4o-mini',
+            messages=[
+                {"role": "system", "content": system_ctx},
+                {"role": "user", "content": user_message}
+            ]
         )
-        code = response.text.strip()
+        code = response.choices[0].message.content.strip()
 
-        # Strip markdown fences if the model adds them anyway
         if code.startswith('```python'):
             code = code[9:]
         if code.startswith('```'):
@@ -131,34 +130,71 @@ def generate_explanation(
     stdout: str,
 ) -> str:
     """
-    Generate a student-friendly explanation of the experiment output.
-
-    Args:
-        model_type:     'REGRESSION' | 'CLASSIFICATION' | 'NEURAL_NETWORK'
-        scenario_title: e.g. 'The Smart Greenhouse'
-        variant_label:  e.g. 'Messy Sensors'
-        stdout:         The raw console output from the sandbox run.
-
-    Returns:
-        A short, friendly explanation string.
+    Generate a student-friendly explanation of the experiment output as JSON.
     """
     user_message = (
         f"Scenario: {scenario_title}\n"
         f"Data variant: {variant_label}\n"
         f"Model type: {model_type}\n"
         f"Console output from the experiment:\n{stdout[:1000]}\n\n"
-        "Explain what these results mean to a 12-14 year old student."
+        "Explain what these results mean, strictly returning JSON."
     )
-
-    full_prompt = f"{_EXPLANATION_SYSTEM}\n\n{user_message}"
 
     try:
         client = _get_client()
-        response = client.models.generate_content(
-            model='gemini-3.0-flash',
-            contents=full_prompt,
+        response = client.chat.completions.create(
+            model='openai/gpt-4o-mini',
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": _EXPLANATION_SYSTEM},
+                {"role": "user", "content": user_message}
+            ]
         )
-        return response.text.strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         logger.exception(f'[llm] generate_explanation failed: {e}')
-        return "The experiment ran successfully! Ask your teacher to help interpret the results."
+        return '{"chefs_choice": "Error generating explanation", "healthy_snacks": "", "guessing_game": "", "tricky_test": "", "fix_it_mode": ""}'
+
+
+def extract_csv_from_unstructured_data(scenario_title: str, file_type: str, base64_content: str) -> str:
+    """
+    Uses the Vision/Language LLM to extract a structured CSV from an uploaded Image/Doc/PDF.
+    """
+    system_prompt = (
+        f"You are an AI data extractor. You need to extract structured tabular data from the provided image/document "
+        f"for a machine learning scenario titled '{scenario_title}'. "
+        f"Return ONLY valid CSV text. Do not use markdown blocks like ```csv. "
+        f"Include headers on the first row. Guess the most appropriate features based on the scenario."
+    )
+    
+    try:
+        client = _get_client()
+        # Create message content depending on whether it's an image
+        if file_type.startswith('image/'):
+            content = [
+                {"type": "text", "text": "Extract tabular data from this image and return it as CSV."},
+                {"type": "image_url", "image_url": {"url": f"data:{file_type};base64,{base64_content}"}}
+            ]
+        else:
+            # If it's a PDF/Doc that was converted to base64, we might not be able to read it with vision API directly 
+            # if it's just raw bytes. For now, assume it's text or image-based text.
+            content = "Please extract the CSV data."
+            
+        response = client.chat.completions.create(
+            model='openai/gpt-4o-mini',
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": content}
+            ]
+        )
+        csv_text = response.choices[0].message.content.strip()
+        if csv_text.startswith('```csv'):
+            csv_text = csv_text[6:]
+        if csv_text.startswith('```'):
+            csv_text = csv_text[3:]
+        if csv_text.endswith('```'):
+            csv_text = csv_text[:-3]
+        return csv_text.strip()
+    except Exception as e:
+        logger.exception(f'[llm] extract_csv failed: {e}')
+        raise ValueError("Failed to extract data from the uploaded file.")

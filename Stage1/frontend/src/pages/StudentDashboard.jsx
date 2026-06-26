@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { BookOpen, BarChart2, BrainCircuit, ShieldAlert, LogOut, Network } from 'lucide-react';
 
-const StudentDashboard = ({ onNavigateToLab, onNavigateToAgentic }) => {
+const StudentDashboard = ({ onNavigateToLab, onNavigateToDataLab, onNavigateToAgentic, onNavigateToFoundations }) => {
   const { user, logout } = useContext(AuthContext);
 
   const modules = [
@@ -13,7 +13,8 @@ const StudentDashboard = ({ onNavigateToLab, onNavigateToAgentic }) => {
       description: 'Supervised, Unsupervised, RL, AI in daily life, and the project cycle.',
       icon: BookOpen,
       color: 'var(--accent-purple)',
-      active: false
+      active: true,
+      onClick: onNavigateToFoundations
     },
     {
       id: 'data_lab',
@@ -22,7 +23,8 @@ const StudentDashboard = ({ onNavigateToLab, onNavigateToAgentic }) => {
       description: 'Collect data, charts, patterns, bias detection, and preprocessing.',
       icon: BarChart2,
       color: 'var(--accent-cyan)',
-      active: false
+      active: true,
+      onClick: onNavigateToDataLab
     },
     {
       id: 'prediction_engine',

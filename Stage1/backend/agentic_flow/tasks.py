@@ -28,8 +28,9 @@ def execute_langgraph_pipeline(workflow_id, initial_input="Explain how black hol
         app = compiler.compile()
         
         # 3. Execute it!
-        result = app.invoke({"input_text": initial_input})
-        final_output = result.get('final_display', str(result))
+        result = app.invoke({"outputs": {"__initial__": initial_input}, "final_display": ""})
+        outputs_dict = result.get('outputs', {})
+        final_output = result.get('final_display', str(outputs_dict))
         
         print(f"✅ Execution Complete. Result: {final_output}")
         
@@ -38,7 +39,7 @@ def execute_langgraph_pipeline(workflow_id, initial_input="Explain how black hol
             "type": "flow_execution_update",
             "message": "Pipeline Execution Completed!",
             "status": "completed",
-            "output": final_output
+            "output": outputs_dict
         })
         
         return result

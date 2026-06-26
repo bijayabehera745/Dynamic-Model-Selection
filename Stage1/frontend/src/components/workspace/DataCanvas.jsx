@@ -114,6 +114,35 @@ const DataCanvas = ({ scenario, selectedVariant, onSelectVariant, previewData, l
     return obj;
   }) || [];
 
+  const isClassification = scenario?.model_type.toLowerCase() === 'classification';
+  const COLORS = ['var(--accent-cyan)', 'var(--accent-green)', 'var(--accent-purple)', 'var(--accent-red)', '#facc15', '#f472b6'];
+
+  let groupedData = {};
+  if (isClassification && chartData.length > 0) {
+    chartData.forEach(row => {
+      const label = row[yCol];
+      if (!groupedData[label]) groupedData[label] = [];
+      groupedData[label].push(row);
+    });
+  }
+
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div style={{ background: 'rgba(15, 23, 42, 0.95)', border: '1px solid var(--glass-border)', padding: '12px', borderRadius: '8px', color: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+          <h4 style={{ margin: '0 0 8px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', color: 'var(--accent-cyan)' }}>Data Point</h4>
+          {Object.entries(data).map(([key, val]) => (
+            <p key={key} style={{ margin: '3px 0', fontSize: '0.95rem' }}>
+              <strong style={{ color: 'var(--text-secondary)' }}>{key}:</strong> {typeof val === 'number' && !Number.isInteger(val) ? val.toFixed(2) : val}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div style={{ ...getBgStyle(), padding: '40px' }}>
       <AnimatePresence mode="popLayout">
@@ -201,12 +230,38 @@ const DataCanvas = ({ scenario, selectedVariant, onSelectVariant, previewData, l
               {previewData && !loading && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ height: '350px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart>
+                    <ScatterChart margin={{ top: 20, right: 30, bottom: 25, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                      <XAxis dataKey={featureCols[0]} name={featureCols[0]} type="number" stroke="var(--text-secondary)" tick={{fontSize: 12}} />
-                      <YAxis dataKey={yCol} name={yCol} type={scenario.model_type.toLowerCase() === 'classification' ? 'category' : 'number'} stroke="var(--text-secondary)" tick={{fontSize: 12}} />
-                      <Tooltip cursor={{strokeDasharray: '3 3'}} contentStyle={{ background: 'var(--bg-panel)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white' }} />
-                      <Scatter name="Data Points" data={chartData} fill="var(--accent-cyan)" />
+                      <XAxis 
+                        dataKey={featureCols[0]} 
+                        name={featureCols[0]} 
+                        type="number" 
+                        stroke="var(--text-secondary)" 
+                        tick={{fontSize: 12}} 
+                        label={{ value: featureCols[0], position: 'bottom', offset: 5, fill: 'var(--text-secondary)', fontSize: 13, fontWeight: 'bold' }}
+                      />
+                      <YAxis 
+                        dataKey={isClassification && featureCols.length > 1 ? featureCols[1] : yCol} 
+                        name={isClassification && featureCols.length > 1 ? featureCols[1] : yCol} 
+                        type={isClassification && featureCols.length === 1 ? 'category' : 'number'} 
+                        stroke="var(--text-secondary)" 
+                        tick={{fontSize: 12}} 
+                        label={{ value: isClassification && featureCols.length > 1 ? featureCols[1] : yCol, angle: -90, position: 'insideLeft', offset: -5, fill: 'var(--text-secondary)', fontSize: 13, fontWeight: 'bold' }}
+                      />
+                      <Tooltip cursor={{strokeDasharray: '3 3'}} content={<CustomTooltip />} />
+                      
+                      {isClassification ? (
+                        Object.keys(groupedData).map((label, i) => (
+                          <Scatter 
+                            key={label} 
+                            name={String(label)} 
+                            data={groupedData[label]} 
+                            fill={COLORS[i % COLORS.length]} 
+                          />
+                        ))
+                      ) : (
+                        <Scatter name="Data Points" data={chartData} fill="var(--accent-cyan)" />
+                      )}
                     </ScatterChart>
                   </ResponsiveContainer>
                 </motion.div>
